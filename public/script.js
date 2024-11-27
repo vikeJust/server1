@@ -9,59 +9,91 @@ const stopBtn = document.getElementById('stopBtn');
 const resetBtn = document.getElementById('resetBtn');
 
 // WebSocket connection
-const ws = new WebSocket('wss://server1-ehl6.onrender.com/');
+let ws;
 
-ws.onmessage = (event) => {
-    const data = JSON.parse(event.data);
+function setupWebSocket() {
+    ws = new WebSocket('wss://server1-ehl6.onrender.com/');
 
-    if (data.type === 'start' && data.startTime) {
-        startTime = data.startTime - (elapsedTime || 0); // Sync elapsed time from server
-        isRunning = true;
-        runTimer();
+    ws.onopen = () => {
+        console.log('WebSocket connection established.');
+    };
+
+    ws.onmessage = (event) => {
+        const data = JSON.parse(event.data);
+
+        if (data.type === 'start' && data.startTime) {
+            startTime = data.startTime - (elapsedTime || 0); // Sync elapsed time from server
+            isRunning = true;
+            runTimer();
+        }
+
+        if (data.type === 'stop' && data.stopTime !== undefined) {
+            clearInterval(timer);
+            isRunning = false;
+            elapsedTime = data.stopTime;
+            updateDisplay(elapsedTime);
+        }
+
+        if (data.type === 'reset') {
+            clearInterval(timer);
+            startTime = null;
+            elapsedTime = 0;
+            isRunning = false;
+            updateDisplay(0);
+        }
+    };
+
+    ws.onclose = (event) => {
+        console.warn('WebSocket closed. Reconnecting in 5 seconds...', event.reason);
+        setTimeout(setupWebSocket, 5000); // Reconnect after 5 seconds
+    };
+
+    ws.onerror = (error) => {
+        console.error('WebSocket error:', error);
+    };
+}
+
+// Start WebSocket connection
+setupWebSocket();
+
+// Send messages through WebSocket
+function sendMessage(message) {
+    if (ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify(message));
+    } else {
+        console.error('WebSocket is not open. Message not sent:', message);
     }
-
-    if (data.type === 'stop' && data.stopTime !== undefined) {
-        clearInterval(timer);
-        isRunning = false;
-        elapsedTime = data.stopTime;
-        updateDisplay(elapsedTime);
-    }
-
-    if (data.type === 'reset') {
-        clearInterval(timer);
-        startTime = null;
-        elapsedTime = 0;
-        isRunning = false;
-        updateDisplay(0);
-    }
-};
+}
 
 // Start button functionality
 startBtn.addEventListener('click', () => {
     if (!isRunning) {
-        ws.send(JSON.stringify({ type: 'start' }));
+        sendMessage({ type: 'start' });
     }
 });
 
 // Stop button functionality
 stopBtn.addEventListener('click', () => {
     if (isRunning) {
-        ws.send(JSON.stringify({ type: 'stop' }));
+        sendMessage({ type: 'stop' });
     }
 });
 
 // Reset button functionality
 resetBtn.addEventListener('click', () => {
-    ws.send(JSON.stringify({ type: 'reset' }));
+    sendMessage({ type: 'reset' });
 });
 
 // Function to run the timer
 function runTimer() {
-    if (!isRunning) return;
+    if (!startTime) {
+        console.error('Timer cannot start without a valid startTime');
+        return;
+    }
+
     clearInterval(timer);
 
-    // Immediate display update
-    updateDisplay(Date.now() - startTime);
+    updateDisplay(Date.now() - startTime); // Immediate display update
 
     timer = setInterval(() => {
         if (!isRunning) {
@@ -74,6 +106,10 @@ function runTimer() {
 
 // Function to update the display
 function updateDisplay(totalMilliseconds) {
+    if (totalMilliseconds < 0) {
+        totalMilliseconds = 0; // Prevent negative values
+    }
+
     const seconds = Math.floor(totalMilliseconds / 1000);
     const milliseconds = totalMilliseconds % 1000;
     display.textContent = formatTime(seconds, milliseconds);

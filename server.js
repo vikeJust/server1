@@ -39,7 +39,7 @@ wss.on('connection', (ws) => {
 
     // Send the current timer state to the newly connected client
     if (globalStartTime && isRunning) {
-        ws.send(JSON.stringify({ type: 'start', startTime: globalStartTime, timestamp: Date.now() }));
+        ws.send(JSON.stringify({ type: 'start', startTime: globalStartTime }));
     }
 
     ws.on('message', (message) => {
@@ -51,14 +51,14 @@ wss.on('connection', (ws) => {
                     globalStartTime = Date.now();
                     isRunning = true;
                     console.log(`Timer started at ${globalStartTime}`);
-                    broadcast({ type: 'start', startTime: globalStartTime, timestamp: Date.now() });
+                    broadcast({ type: 'start', startTime: globalStartTime });
                 }
             } else if (data.type === 'stop') {
                 if (isRunning) {
-                    const stopTime = Date.now() - globalStartTime;  // Calculate the stop time on the server
+                    const stopTime = Date.now() - globalStartTime; // Calculate elapsed time
                     isRunning = false;
                     console.log('Timer stopped');
-                    broadcast({ type: 'stop', stopTime });  // Broadcast stop time to all clients
+                    broadcast({ type: 'stop', stopTime });
                 }
             } else if (data.type === 'reset') {
                 globalStartTime = null;
