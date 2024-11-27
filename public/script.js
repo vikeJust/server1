@@ -1,7 +1,7 @@
 let timer;
 let isRunning = false;
-let startTime = null;
-let elapsedTime = 0;
+let startTime = null;  // The moment when the timer started
+let elapsedTime = 0;   // The time accumulated during pauses or stops
 
 const display = document.getElementById('display');
 const startBtn = document.getElementById('startBtn');
@@ -10,14 +10,10 @@ const resetBtn = document.getElementById('resetBtn');
 
 let ws;
 let reconnectAttempts = 0;
-let pingInterval;
-let pongTimeout;
 let messageQueue = [];
 
 const RECONNECT_DELAY = 5000;
 const MAX_RECONNECT_ATTEMPTS = 10;
-const PING_INTERVAL = 30000;
-const PONG_TIMEOUT = 10000;
 
 function setupWebSocket() {
     ws = new WebSocket('wss://server1-ehl6.onrender.com/');
@@ -26,31 +22,31 @@ function setupWebSocket() {
         console.log('WebSocket connection established.');
         reconnectAttempts = 0;
         processMessageQueue();
-        startPingPong();
     };
 
     ws.onmessage = (event) => {
         const data = JSON.parse(event.data);
 
         if (data.type === 'start' && data.startTime) {
-            // Sync with server's start time
-            startTime = data.startTime - elapsedTime;
+            // Sync start time from the server
+            startTime = data.startTime - elapsedTime;  // Adjust for accumulated time
             isRunning = true;
             runTimer();
-        } else if (data.type === 'stop' && data.stopTime !== undefined) {
+        }
+
+        if (data.type === 'stop' && data.stopTime !== undefined) {
             clearInterval(timer);
             isRunning = false;
-            elapsedTime = data.stopTime;
+            elapsedTime = data.stopTime;  // Update with accurate stop time
             updateDisplay(elapsedTime);
-        } else if (data.type === 'reset') {
+        }
+
+        if (data.type === 'reset') {
             clearInterval(timer);
             startTime = null;
             elapsedTime = 0;
             isRunning = false;
             updateDisplay(0);
-        } else if (data.type === 'pong') {
-            clearTimeout(pongTimeout);
-            console.log('Pong received');
         }
     };
 
@@ -92,32 +88,21 @@ function sendMessage(message) {
     }
 }
 
-function startPingPong() {
-    pingInterval = setInterval(() => {
-        if (ws.readyState === WebSocket.OPEN) {
-            console.log('Sending ping...');
-            ws.send(JSON.stringify({ type: 'ping' }));
-            pongTimeout = setTimeout(() => {
-                console.error('No pong response received, attempting reconnection...');
-                ws.close();
-            }, PONG_TIMEOUT);
-        }
-    }, PING_INTERVAL);
-}
-
 startBtn.addEventListener('click', () => {
     if (!isRunning) {
         const now = Date.now();
 
-        // Update elapsedTime only if timer had previously started
-        if (startTime) {
-            elapsedTime += now - startTime;
-        }
-
-        startTime = now; // Update startTime
+        // If the timer is stopped or reset, we start fresh
+        startTime = now;
         isRunning = true;
 
-        sendMessage({ type: 'start', startTime: now }); // Notify server
+        // Send the start signal to the server with current startTime
+        sendMessage({ type: 'start', startTime: now });
+
+        // Immediately update the display to reflect the current elapsedTime
+        updateDisplay(elapsedTime);
+
+        // Start the timer update function
         runTimer();
     }
 });
@@ -126,8 +111,13 @@ stopBtn.addEventListener('click', () => {
     if (isRunning) {
         clearInterval(timer);
         isRunning = false;
-        elapsedTime = Date.now() - startTime + elapsedTime; // Ensure accurate stop time
-        sendMessage({ type: 'stop', stopTime: elapsedTime }); // Notify server
+
+        // Calculate the stop time and update display
+        const stopTime = Date.now() - startTime + elapsedTime;
+        updateDisplay(stopTime);
+
+        // Send the stop signal to the server
+        sendMessage({ type: 'stop', stopTime });
     }
 });
 
@@ -136,20 +126,22 @@ resetBtn.addEventListener('click', () => {
     startTime = null;
     elapsedTime = 0;
     isRunning = false;
-    sendMessage({ type: 'reset' }); // Notify server
+
+    // Send reset message to the server
+    sendMessage({ type: 'reset' });
+
+    // Reset the display
     updateDisplay(0);
 });
 
 function runTimer() {
-    clearInterval(timer);
-
     timer = setInterval(() => {
         if (!isRunning) {
             clearInterval(timer);
             return;
         }
 
-        // Calculate total elapsed time
+        // Calculate the total time passed
         const now = Date.now();
         const timePassed = now - startTime + elapsedTime;
         updateDisplay(timePassed);
@@ -178,5 +170,4 @@ function pad(num, size = 2) {
     return num.toString().padStart(size, '0');
 }
 
-// Initialize WebSocket connection
 setupWebSocket();

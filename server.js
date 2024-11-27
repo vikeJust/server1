@@ -29,6 +29,7 @@ const wss = new WebSocket.Server({ server });
 
 let globalStartTime = null;
 let isRunning = false;
+let accumulatedTime = 0; // Keep track of the accumulated time when paused
 
 // Broadcast a message to all connected clients
 function broadcast(data) {
@@ -45,37 +46,38 @@ wss.on('connection', (ws) => {
     // Send the current state to the newly connected client
     if (globalStartTime !== null) {
         if (isRunning) {
-            ws.send(JSON.stringify({ type: 'start', startTime: globalStartTime }));
+            ws.send(JSON.stringify({ type: 'start', startTime: globalStartTime, accumulatedTime }));
         } else {
-            const stopTime = Date.now() - globalStartTime;
+            const stopTime = Date.now() - globalStartTime + accumulatedTime;
             ws.send(JSON.stringify({ type: 'stop', stopTime }));
         }
     }
 
-    // Handle incoming messages from clients
     ws.on('message', (message) => {
         try {
             const data = JSON.parse(message);
 
             if (data.type === 'start') {
                 if (!isRunning) {
-                    // Start the timer and broadcast the start time
-                    globalStartTime = Date.now();
+                    // Start the timer
+                    globalStartTime = Date.now() - accumulatedTime;  // Adjust for accumulated time
                     isRunning = true;
                     console.log(`Timer started at ${globalStartTime}`);
-                    broadcast({ type: 'start', startTime: globalStartTime });
+                    broadcast({ type: 'start', startTime: globalStartTime, accumulatedTime });
                 }
             } else if (data.type === 'stop') {
                 if (isRunning) {
-                    // Stop the timer and broadcast the stop time
-                    const stopTime = Date.now() - globalStartTime;
+                    // Stop the timer
+                    const stopTime = Date.now() - globalStartTime + accumulatedTime;
                     isRunning = false;
+                    accumulatedTime = stopTime; // Store the time accumulated so far
                     console.log('Timer stopped');
                     broadcast({ type: 'stop', stopTime });
                 }
             } else if (data.type === 'reset') {
-                // Reset the timer and broadcast the reset
+                // Reset the timer
                 globalStartTime = null;
+                accumulatedTime = 0;
                 isRunning = false;
                 console.log('Timer reset');
                 broadcast({ type: 'reset' });
