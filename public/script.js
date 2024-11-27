@@ -15,29 +15,28 @@ let pingInterval;
 let pongTimeout;
 let messageQueue = [];
 
-const RECONNECT_DELAY = 5000; // 5 seconds for reconnecting
-const MAX_RECONNECT_ATTEMPTS = 10; // Max number of reconnect attempts
-const PING_INTERVAL = 30000; // 30 seconds for sending ping
-const PONG_TIMEOUT = 10000; // 10 seconds to wait for pong
+const RECONNECT_DELAY = 5000; 
+const MAX_RECONNECT_ATTEMPTS = 10; 
+const PING_INTERVAL = 30000;
+const PONG_TIMEOUT = 10000; 
 
-// Function to establish WebSocket connection
 function setupWebSocket() {
     ws = new WebSocket('wss://server1-ehl6.onrender.com/');
 
     ws.onopen = () => {
         console.log('WebSocket connection established.');
-        reconnectAttempts = 0; // Reset reconnect attempts
-        processMessageQueue(); // Send any queued messages
-        startPingPong(); // Start sending pings
+        reconnectAttempts = 0;
+        processMessageQueue();
+        startPingPong();
     };
 
     ws.onmessage = (event) => {
         const data = JSON.parse(event.data);
 
         if (data.type === 'start' && data.startTime) {
-            // Prevent resetting to zero; smoothly synchronize with server's time
+           
             if (!startTime || !isRunning) {
-                startTime = data.startTime - elapsedTime; // Adjust based on elapsed time
+                startTime = data.startTime - elapsedTime; 
                 isRunning = true;
                 runTimer();
             }
@@ -46,7 +45,7 @@ function setupWebSocket() {
         if (data.type === 'stop' && data.stopTime !== undefined) {
             clearInterval(timer);
             isRunning = false;
-            elapsedTime = data.stopTime; // Use the server's precise stop time
+            elapsedTime = data.stopTime; 
             updateDisplay(elapsedTime);
         }
 
@@ -59,7 +58,7 @@ function setupWebSocket() {
         }
 
         if (data.type === 'pong') {
-            clearTimeout(pongTimeout); // Clear the pong timeout on receiving pong
+            clearTimeout(pongTimeout); 
             console.log('Pong received');
         }
     };
@@ -75,7 +74,6 @@ function setupWebSocket() {
     };
 }
 
-// Function to handle reconnection
 function handleReconnection() {
     if (reconnectAttempts < MAX_RECONNECT_ATTEMPTS) {
         reconnectAttempts++;
@@ -86,7 +84,6 @@ function handleReconnection() {
     }
 }
 
-// Function to process the queued messages when WebSocket is open
 function processMessageQueue() {
     while (ws.readyState === WebSocket.OPEN && messageQueue.length > 0) {
         const message = messageQueue.shift();
@@ -95,7 +92,6 @@ function processMessageQueue() {
     }
 }
 
-// Send messages through WebSocket
 function sendMessage(message) {
     if (ws.readyState === WebSocket.OPEN) {
         ws.send(JSON.stringify(message));
@@ -105,7 +101,6 @@ function sendMessage(message) {
     }
 }
 
-// Function to start sending ping/pong messages
 function startPingPong() {
     pingInterval = setInterval(() => {
         if (ws.readyState === WebSocket.OPEN) {
@@ -113,43 +108,37 @@ function startPingPong() {
             ws.send(JSON.stringify({ type: 'ping' }));
             pongTimeout = setTimeout(() => {
                 console.error('No pong response received, attempting reconnection...');
-                ws.close(); // Force close the WebSocket to trigger reconnection
+                ws.close();
             }, PONG_TIMEOUT);
         }
     }, PING_INTERVAL);
 }
 
-// Start WebSocket connection
 setupWebSocket();
 
-// Start button functionality
 startBtn.addEventListener('click', () => {
     if (!isRunning) {
-        // Start locally before the server responds
-        startTime = Date.now() - elapsedTime; // Approximate start time
+
+        startTime = Date.now() - elapsedTime; 
         isRunning = true;
         runTimer();
 
-        // Notify the server to start
         sendMessage({ type: 'start' });
     }
 });
 
-// Stop button functionality
 stopBtn.addEventListener('click', () => {
     if (isRunning) {
-        clearInterval(timer); // Stop the visual updates immediately
+        clearInterval(timer);
         isRunning = false;
         sendMessage({ type: 'stop' });
     }
 });
 
-// Reset button functionality
 resetBtn.addEventListener('click', () => {
     sendMessage({ type: 'reset' });
 });
 
-// Function to run the timer
 function runTimer() {
     clearInterval(timer);
 
@@ -165,10 +154,9 @@ function runTimer() {
     }, 10);
 }
 
-// Function to update the display
 function updateDisplay(totalMilliseconds) {
     if (totalMilliseconds < 0) {
-        totalMilliseconds = 0; // Prevent negative values
+        totalMilliseconds = 0;
     }
 
     const seconds = Math.floor(totalMilliseconds / 1000);
@@ -176,7 +164,6 @@ function updateDisplay(totalMilliseconds) {
     display.textContent = formatTime(seconds, milliseconds);
 }
 
-// Format time for display
 function formatTime(seconds, milliseconds) {
     const hours = Math.floor(seconds / 3600);
     const minutes = Math.floor((seconds % 3600) / 60);
@@ -185,7 +172,6 @@ function formatTime(seconds, milliseconds) {
     return `${pad(hours)}:${pad(minutes)}:${pad(secs)}.${pad(ms, 2)}`;
 }
 
-// Pad single digit numbers with leading zeroes
 function pad(num, size = 2) {
     return num.toString().padStart(size, '0');
 }

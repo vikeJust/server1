@@ -3,10 +3,8 @@ const path = require('path');
 const fs = require('fs');
 const WebSocket = require('ws');
 
-// Use Render's PORT environment variable or default to 8080
 const port = process.env.PORT || 8080;
 
-// Create an HTTP server to serve static files
 const server = http.createServer((req, res) => {
     const filePath = req.url === '/' ? '/index.html' : req.url;
     const ext = path.extname(filePath);
@@ -27,17 +25,14 @@ const server = http.createServer((req, res) => {
     });
 });
 
-// WebSocket Server to handle timer state
 const wss = new WebSocket.Server({ server });
 
-// Global state for the timer
 let globalStartTime = null;
 let isRunning = false;
 
 wss.on('connection', (ws) => {
     console.log('A new client connected.');
 
-    // Send the current timer state to the newly connected client
     if (globalStartTime && isRunning) {
         ws.send(JSON.stringify({ type: 'start', startTime: globalStartTime }));
     }
@@ -55,7 +50,7 @@ wss.on('connection', (ws) => {
                 }
             } else if (data.type === 'stop') {
                 if (isRunning) {
-                    const stopTime = Date.now() - globalStartTime; // Calculate elapsed time
+                    const stopTime = Date.now() - globalStartTime;
                     isRunning = false;
                     console.log('Timer stopped');
                     broadcast({ type: 'stop', stopTime });
@@ -75,7 +70,6 @@ wss.on('connection', (ws) => {
     ws.on('error', (error) => console.error('WebSocket error:', error.message));
 });
 
-// Function to broadcast messages to all clients
 function broadcast(data) {
     wss.clients.forEach((client) => {
         if (client.readyState === WebSocket.OPEN) {
@@ -84,7 +78,6 @@ function broadcast(data) {
     });
 }
 
-// Start the server
 server.listen(port, () => {
     console.log(`Server is running on port ${port}`);
 });
