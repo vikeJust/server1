@@ -3,21 +3,26 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="A simple and responsive stopwatch application.">
     <title>Trial Stopwatch</title>
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
     <div class="container">
-        <img src="car.png" alt="Car Image" class="header-image">
-        
+
+        <img src="car.png" alt="A car image" class="header-image">
+
         <h1>Stopwatch</h1>
-        <div id="display">00:00:00.000</div>
-        <div class="buttons"> 
-            <button id="startBtn">Start</button>
-            <button id="stopBtn">Stop</button>
-            <button id="resetBtn">Reset</button>
+  
+        <div id="display" class="stopwatch-display" aria-live="polite">00:00:00.000</div>
+
+        <div class="buttons">
+            <button id="startBtn" aria-label="Start Stopwatch">Start</button>
+            <button id="stopBtn" aria-label="Stop Stopwatch">Stop</button>
+            <button id="resetBtn" aria-label="Reset Stopwatch">Reset</button>
         </div>
     </div>
+
     <script src="script.js"></script>
 </body>
 </html>
