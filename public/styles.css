@@ -77,3 +77,7 @@ button:disabled {
     background-color: #e77600;
     cursor: not-allowed;
 }
+#display {
+    transition: all 0.1s linear; /* Smooth rendering of time changes */
+}
+

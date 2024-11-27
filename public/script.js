@@ -8,17 +8,16 @@ const startBtn = document.getElementById('startBtn');
 const stopBtn = document.getElementById('stopBtn');
 const resetBtn = document.getElementById('resetBtn');
 
-// WebSocket connection variables
 let ws;
 let reconnectAttempts = 0;
 let pingInterval;
 let pongTimeout;
 let messageQueue = [];
 
-const RECONNECT_DELAY = 5000; 
-const MAX_RECONNECT_ATTEMPTS = 10; 
+const RECONNECT_DELAY = 5000;
+const MAX_RECONNECT_ATTEMPTS = 10;
 const PING_INTERVAL = 30000;
-const PONG_TIMEOUT = 10000; 
+const PONG_TIMEOUT = 10000;
 
 function setupWebSocket() {
     ws = new WebSocket('wss://server1-ehl6.onrender.com/');
@@ -34,31 +33,23 @@ function setupWebSocket() {
         const data = JSON.parse(event.data);
 
         if (data.type === 'start' && data.startTime) {
-           
-            if (!startTime || !isRunning) {
-                startTime = data.startTime - elapsedTime; 
-                isRunning = true;
-                runTimer();
-            }
-        }
-
-        if (data.type === 'stop' && data.stopTime !== undefined) {
+            // Sync with server's start time
+            startTime = data.startTime - elapsedTime;
+            isRunning = true;
+            runTimer();
+        } else if (data.type === 'stop' && data.stopTime !== undefined) {
             clearInterval(timer);
             isRunning = false;
-            elapsedTime = data.stopTime; 
+            elapsedTime = data.stopTime;
             updateDisplay(elapsedTime);
-        }
-
-        if (data.type === 'reset') {
+        } else if (data.type === 'reset') {
             clearInterval(timer);
             startTime = null;
             elapsedTime = 0;
             isRunning = false;
             updateDisplay(0);
-        }
-
-        if (data.type === 'pong') {
-            clearTimeout(pongTimeout); 
+        } else if (data.type === 'pong') {
+            clearTimeout(pongTimeout);
             console.log('Pong received');
         }
     };
@@ -114,16 +105,20 @@ function startPingPong() {
     }, PING_INTERVAL);
 }
 
-setupWebSocket();
-
 startBtn.addEventListener('click', () => {
     if (!isRunning) {
+        const now = Date.now();
 
-        startTime = Date.now() - elapsedTime; 
+        // Update elapsedTime only if timer had previously started
+        if (startTime) {
+            elapsedTime += now - startTime;
+        }
+
+        startTime = now; // Update startTime
         isRunning = true;
-        runTimer();
 
-        sendMessage({ type: 'start' });
+        sendMessage({ type: 'start', startTime: now }); // Notify server
+        runTimer();
     }
 });
 
@@ -131,12 +126,18 @@ stopBtn.addEventListener('click', () => {
     if (isRunning) {
         clearInterval(timer);
         isRunning = false;
-        sendMessage({ type: 'stop' });
+        elapsedTime = Date.now() - startTime + elapsedTime; // Ensure accurate stop time
+        sendMessage({ type: 'stop', stopTime: elapsedTime }); // Notify server
     }
 });
 
 resetBtn.addEventListener('click', () => {
-    sendMessage({ type: 'reset' });
+    clearInterval(timer);
+    startTime = null;
+    elapsedTime = 0;
+    isRunning = false;
+    sendMessage({ type: 'reset' }); // Notify server
+    updateDisplay(0);
 });
 
 function runTimer() {
@@ -148,10 +149,11 @@ function runTimer() {
             return;
         }
 
+        // Calculate total elapsed time
         const now = Date.now();
-        const timePassed = now - startTime;
+        const timePassed = now - startTime + elapsedTime;
         updateDisplay(timePassed);
-    }, 10);
+    }, 10); // Update every 10 milliseconds
 }
 
 function updateDisplay(totalMilliseconds) {
@@ -175,3 +177,6 @@ function formatTime(seconds, milliseconds) {
 function pad(num, size = 2) {
     return num.toString().padStart(size, '0');
 }
+
+// Initialize WebSocket connection
+setupWebSocket();
