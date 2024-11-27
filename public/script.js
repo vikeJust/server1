@@ -15,7 +15,7 @@ ws.onmessage = (event) => {
     const data = JSON.parse(event.data);
 
     if (data.type === 'start' && data.startTime) {
-        startTime = data.startTime;
+        startTime = data.startTime - (elapsedTime || 0); // Sync elapsed time from server
         isRunning = true;
         runTimer();
     }
@@ -24,7 +24,7 @@ ws.onmessage = (event) => {
         clearInterval(timer);
         isRunning = false;
         elapsedTime = data.stopTime;
-        display.textContent = formatTime(Math.floor(elapsedTime / 1000), elapsedTime % 1000);
+        updateDisplay(elapsedTime);
     }
 
     if (data.type === 'reset') {
@@ -32,7 +32,7 @@ ws.onmessage = (event) => {
         startTime = null;
         elapsedTime = 0;
         isRunning = false;
-        display.textContent = formatTime(0, 0);
+        updateDisplay(0);
     }
 };
 
@@ -45,9 +45,9 @@ startBtn.addEventListener('click', () => {
 
 // Stop button functionality
 stopBtn.addEventListener('click', () => {
-    clearInterval(timer);
-    isRunning = false;
-    ws.send(JSON.stringify({ type: 'stop' }));  // Notify the server to stop the timer
+    if (isRunning) {
+        ws.send(JSON.stringify({ type: 'stop' }));
+    }
 });
 
 // Reset button functionality
@@ -57,14 +57,26 @@ resetBtn.addEventListener('click', () => {
 
 // Function to run the timer
 function runTimer() {
+    if (!isRunning) return;
     clearInterval(timer);
+
+    // Immediate display update
+    updateDisplay(Date.now() - startTime);
+
     timer = setInterval(() => {
-        const now = Date.now();
-        const timePassed = now - startTime;
-        const seconds = Math.floor(timePassed / 1000);
-        const milliseconds = timePassed % 1000;
-        display.textContent = formatTime(seconds, milliseconds);
+        if (!isRunning) {
+            clearInterval(timer);
+            return;
+        }
+        updateDisplay(Date.now() - startTime);
     }, 10);
+}
+
+// Function to update the display
+function updateDisplay(totalMilliseconds) {
+    const seconds = Math.floor(totalMilliseconds / 1000);
+    const milliseconds = totalMilliseconds % 1000;
+    display.textContent = formatTime(seconds, milliseconds);
 }
 
 // Format time for display
