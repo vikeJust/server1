@@ -22,15 +22,18 @@ function setupWebSocket() {
         const data = JSON.parse(event.data);
 
         if (data.type === 'start' && data.startTime) {
-            startTime = data.startTime - (elapsedTime || 0); // Sync elapsed time from server
-            isRunning = true;
-            runTimer();
+            // Prevent resetting to zero; smoothly synchronize with server's time
+            if (!startTime || !isRunning) {
+                startTime = data.startTime - elapsedTime; // Adjust based on elapsed time
+                isRunning = true;
+                runTimer();
+            }
         }
 
         if (data.type === 'stop' && data.stopTime !== undefined) {
             clearInterval(timer);
             isRunning = false;
-            elapsedTime = data.stopTime;
+            elapsedTime = data.stopTime; // Use the server's precise stop time
             updateDisplay(elapsedTime);
         }
 
@@ -68,6 +71,12 @@ function sendMessage(message) {
 // Start button functionality
 startBtn.addEventListener('click', () => {
     if (!isRunning) {
+        // Start locally before the server responds
+        startTime = Date.now() - elapsedTime; // Approximate start time
+        isRunning = true;
+        runTimer();
+
+        // Notify the server to start
         sendMessage({ type: 'start' });
     }
 });
@@ -75,6 +84,8 @@ startBtn.addEventListener('click', () => {
 // Stop button functionality
 stopBtn.addEventListener('click', () => {
     if (isRunning) {
+        clearInterval(timer); // Stop the visual updates immediately
+        isRunning = false;
         sendMessage({ type: 'stop' });
     }
 });
@@ -86,21 +97,17 @@ resetBtn.addEventListener('click', () => {
 
 // Function to run the timer
 function runTimer() {
-    if (!startTime) {
-        console.error('Timer cannot start without a valid startTime');
-        return;
-    }
-
     clearInterval(timer);
-
-    updateDisplay(Date.now() - startTime); // Immediate display update
 
     timer = setInterval(() => {
         if (!isRunning) {
             clearInterval(timer);
             return;
         }
-        updateDisplay(Date.now() - startTime);
+
+        const now = Date.now();
+        const timePassed = now - startTime;
+        updateDisplay(timePassed);
     }, 10);
 }
 
