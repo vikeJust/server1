@@ -6,7 +6,7 @@
 
 body {
     font-family: Arial, sans-serif;
-    background-color: #f0f0f0;
+    background: #454545;
     display: flex;
     justify-content: center;
     align-items: center;
@@ -16,7 +16,7 @@ body {
 
 .container {
     text-align: center;
-    background: #ffffff;
+    background: #e77600;
     padding: 2rem;
     border-radius: 8px;
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
@@ -31,24 +31,27 @@ body {
 h1 {
     font-size: 2rem;
     margin-bottom: 1rem;
-    color: #333333;
+    color: #92b1c5;
+    text-shadow: 3px 1px 1px rgba(0, 0, 0, 0.9);
 }
 
 .stopwatch-display {
     font-size: 3rem;
     font-weight: bold;
     margin: 1rem 0;
-    color: #444444;
+    color: #92b1c5;
     padding: 0.5rem 1rem;
-    border: 2px solid #ccc;
-    border-radius: 5px;
-    background-color: #f9f9f9;
+    border: 5px solid #aeaeac;
+    border-radius: 10px;
+    background-color: #794f1f;
+    box-shadow: 0 0 0 5px #454545;
+    text-shadow: 4px 1px 1px rgba(0, 0, 0, 0.8);
 }
 
 .buttons {
     display: flex;
     justify-content: center;
-    gap: 1rem;
+    gap: 1rem;  
 }
 
 button {
@@ -57,9 +60,13 @@ button {
     border: none;
     border-radius: 5px;
     cursor: pointer;
-    background-color: #007bff;
-    color: #ffffff;
+    background-color: #794f1f;
+    color: #feb30c;
     transition: background-color 0.3s;
+    border: 2px solid #ccc;
+    font-weight: bold;
+    box-shadow: 0 0 0 5px #454545;
+    text-shadow: 3px 1px 1px rgba(0, 0, 0, 0.8);
 }
 
 button:hover {
@@ -67,6 +74,6 @@ button:hover {
 }
 
 button:disabled {
-    background-color: #cccccc;
+    background-color: #e77600;
     cursor: not-allowed;
 }
